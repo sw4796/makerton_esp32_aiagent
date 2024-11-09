@@ -19,7 +19,7 @@ const HTTP_PORT = parseInt(process.env.HTTP_PORT || "8000");
 // Device WebSocket server
 const wsServer = new WebSocketServer({ 
   port: WS_PORT,
-  path: '/device'
+  path: '/'
 }, () =>
   console.log(`Device WS server is listening at ws://localhost:${WS_PORT}/device`)
 );
@@ -55,9 +55,9 @@ wsServer.on("connection", (ws: WebSocket, req) => {
     // }
 
     // Forward data to device clients
+    audioManager.handleAudioBuffer(data as Buffer)
     deviceClients.forEach((client, i) => {
       if (client.readyState === WebSocket.OPEN) {
-        audioManager.handleAudioBuffer(data as Buffer)
         // if (audioTimeout) {
         //   clearTimeout(audioTimeout);
         // }

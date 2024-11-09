@@ -9,6 +9,8 @@ void *audio_malloc(size_t size) {
     return ptr;
 }
 
+
+
 float calculateRMS(int32_t *samples, size_t count)
 {
   float sum = 0;

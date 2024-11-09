@@ -126,29 +126,80 @@ void micTask(void *parameter)
 {
   size_t bytesIn = 0;
   const size_t bufferSize = bufferLen;
-  int16_t *buffer = (int16_t *)audio_malloc(bufferSize * sizeof(int16_t));
+  int32_t *rawBuffer = (int32_t *)audio_malloc(bufferSize * sizeof(int32_t));
+  int16_t *processedBuffer = (int16_t *)audio_malloc(bufferSize * sizeof(int16_t));
+  int16_t *resampledBuffer = (int16_t *)audio_malloc(bufferSize * 3 * sizeof(int16_t)); // Buffer for resampled audio
 
-  if (!buffer)
+  if (!rawBuffer || !processedBuffer || !resampledBuffer)
   {
-    Serial.println("Failed to allocate memory for audio buffer");
+    Serial.println("Failed to allocate memory for audio buffers");
+    if (rawBuffer) free(rawBuffer);
+    if (processedBuffer) free(processedBuffer);
+    if (resampledBuffer) free(resampledBuffer);
     vTaskDelete(NULL);
     return;
   }
+
+  // Resampling state
+  float resampleRatio = 44100.0f / AUDIO_QUALITY_SPEAKER;
+  size_t accumulatedSamples = 0;
 
   while (1)
   {
     if (isSpeakerBusy)
     {
-      vTaskDelay(pdMS_TO_TICKS(10)); // Short delay to prevent busy-waiting
+      vTaskDelay(pdMS_TO_TICKS(10));
       continue;
     }
-    esp_err_t result = i2s_read(I2S_PORT_MIC, buffer, bufferSize * sizeof(int16_t), &bytesIn, portMAX_DELAY);
+
+    esp_err_t result = i2s_read(I2S_PORT_MIC, rawBuffer, bufferSize * sizeof(int32_t), &bytesIn, portMAX_DELAY);
     if (result == ESP_OK && bytesIn > 0)
     {
-      detectSound(buffer, bytesIn / sizeof(int16_t));
+      // Convert 32-bit samples to 16-bit and normalize
+      size_t samples = bytesIn / sizeof(int32_t);
+      for (size_t i = 0; i < samples; i++) {
+        processedBuffer[i] = (int16_t)(rawBuffer[i] >> 16);
+      }
+
+      detectSound(processedBuffer, samples);
+      
       if (isWebSocketConnected)
       {
-        client.sendBinary((const char *)buffer, bytesIn);
+        // Resample to 44.1kHz using linear interpolation
+        size_t resampledCount = 0;
+        for (size_t i = 0; i < samples - 1; i++)
+        {
+          float inputIndex = i * resampleRatio;
+          size_t inputIndexInt = (size_t)inputIndex;
+          float fraction = inputIndex - inputIndexInt;
+
+          // Linear interpolation between adjacent samples
+          int16_t sample1 = processedBuffer[i];
+          int16_t sample2 = processedBuffer[i + 1];
+          int16_t interpolatedSample = (int16_t)(sample1 + fraction * (sample2 - sample1));
+          
+          resampledBuffer[resampledCount++] = interpolatedSample;
+        }
+
+        // Accumulate samples until we have enough for a proper buffer
+        if (accumulatedSamples + resampledCount >= bufferSize)
+        {
+          // Send full buffer worth of samples
+          size_t samplesToSend = bufferSize;
+          client.sendBinary((const char *)resampledBuffer, samplesToSend * sizeof(int16_t));
+          
+          // Keep remaining samples for next buffer
+          if (accumulatedSamples + resampledCount > bufferSize) {
+            memmove(resampledBuffer, 
+                   resampledBuffer + samplesToSend, 
+                   (accumulatedSamples + resampledCount - bufferSize) * sizeof(int16_t));
+            accumulatedSamples = accumulatedSamples + resampledCount - bufferSize;
+          } else {
+            accumulatedSamples = 0;
+          }
+        } else {
+          accumulatedSamples += resampledCount;
+        }
       }
     }
     else if (result != ESP_OK)
@@ -156,9 +207,10 @@ void micTask(void *parameter)
       Serial.printf("Error reading from I2S: %d\n", result);
       vTaskDelay(pdMS_TO_TICKS(10));
     }
-    taskYIELD(); // Allow other tasks to run
+    taskYIELD();
   }
 
-  free(buffer);
+  free(rawBuffer);
+  free(processedBuffer);
   vTaskDelete(NULL);
 }

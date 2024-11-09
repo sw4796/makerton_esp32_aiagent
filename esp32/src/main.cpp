@@ -93,17 +93,17 @@ void setup()
 
 void loop()
 {
-  static unsigned long lastSwitch = 0;
-  static bool isMicActive = true;
-  const unsigned long SWITCH_INTERVAL = 10000; // 10 seconds
+  // static unsigned long lastSwitch = 0;
+  // static bool isMicActive = true;
+  // const unsigned long SWITCH_INTERVAL = 10000; // 10 seconds
 
-  unsigned long currentTime = millis();
+  // unsigned long currentTime = millis();
 
-  if (currentTime - lastSwitch >= SWITCH_INTERVAL)
-  {
-    isMicActive = !isMicActive;
-    lastSwitch = currentTime;
-  }
+  // if (currentTime - lastSwitch >= SWITCH_INTERVAL)
+  // {
+  //   isMicActive = !isMicActive;
+  //   lastSwitch = currentTime;
+  // }
   // handleSpeaker();
   // handleMicrophone();
   loopWebsocket();

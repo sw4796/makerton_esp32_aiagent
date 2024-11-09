@@ -86,15 +86,15 @@ void reconnectWSServer() {
 void loopWebsocket()
 {
   client.poll();
-  static unsigned long lastReconnectAttempt = 0;
-  unsigned long currentMillis = millis();
+//   static unsigned long lastReconnectAttempt = 0;
+//   unsigned long currentMillis = millis();
 
-  if (currentMillis - lastReconnectAttempt >= 5000)
-  {
-    lastReconnectAttempt = currentMillis;
-    reconnectWSServer();
-  }
+//   if (currentMillis - lastReconnectAttempt >= 5000)
+//   {
+//     lastReconnectAttempt = currentMillis;
+//     reconnectWSServer();
+//   }
 
-//   setButtonState();
+  setButtonState();
 //   delay(1);
 }
