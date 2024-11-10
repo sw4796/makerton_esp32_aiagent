@@ -38,23 +38,40 @@ export class AudioManager {
 
     private config = this.configHighDef;
     constructor() {
-        this.initializeFileWriter();
+        // Don't initialize file writer in constructor
     }
 
-    private initializeFileWriter() {
-        this.fileWriter = new wav.FileWriter('recording.wav', {
+    private initializeFileWriter(filename: string) {
+        this.fileWriter = new wav.FileWriter(filename, {
             sampleRate: this.config.sampleRate,
             channels: this.config.channels,
             bitDepth: this.config.bitDepth
         });
     }
 
+    public startRecording() {
+        // Generate random ID for filename
+        const randomId = Math.random().toString(36).substring(2, 15);
+        const filename = `recording-${randomId}.wav`;
+        
+        // Initialize new file writer with random filename
+        this.initializeFileWriter(filename);
+    }
+
     private audioBuffer: Buffer = Buffer.alloc(0);
-    private readonly WRITE_DELAY = 1000; // 1 second delay before writing
+    private readonly WRITE_DELAY = 500; // Reduced to 500ms for more responsive writes
+    private readonly MAX_BUFFER_SIZE = 1024 * 1024; // 1MB max buffer size to prevent memory issues
+    private readonly MIN_BUFFER_SIZE = this.config.sampleRate; // 1 second worth of audio data
+
     
-    private readonly MIN_BUFFER_SIZE = this.config.sampleRate * 2; // 0.5 seconds worth of stereo audio data
     public handleAudioBuffer(buffer: Buffer, ws?: WebSocket): void {
         try {
+            // Check if adding new buffer would exceed max size
+            if (this.audioBuffer.length + buffer.length > this.MAX_BUFFER_SIZE) {
+                // Process existing buffer before adding more
+                this.processAndWriteBuffer();
+            }
+
             // Concatenate incoming buffer with existing data
             this.audioBuffer = Buffer.concat([this.audioBuffer, buffer]);
 
@@ -65,7 +82,9 @@ export class AudioManager {
 
             // Set new timeout to trigger write
             this.writeTimeout = setTimeout(() => {
-                this.processAndWriteBuffer();
+                if (this.audioBuffer.length > 0) {
+                    this.processAndWriteBuffer();
+                }
             }, this.WRITE_DELAY);
 
             // If buffer exceeds minimum size, process immediately
@@ -75,12 +94,41 @@ export class AudioManager {
 
         } catch (error) {
             console.error('Error handling audio buffer:', error);
+            // Log more details about the error
+            if (error instanceof Error) {
+                console.error('Error details:', error.message, error.stack);
+            }
             this.audioBuffer = Buffer.alloc(0);
             this.isProcessing = false;
         }
     }
 
+    private processAndWriteBufferSimple(): void {
+        if (!this.fileWriter || this.audioBuffer.length === 0 || this.isProcessing) return;
+
+        try {
+            this.isProcessing = true;
+            // Write buffer and clear in one atomic operation
+            const bufferToWrite = this.audioBuffer;
+            this.audioBuffer = Buffer.alloc(0);
+            
+            this.fileWriter.write(bufferToWrite);
+            
+            // Log successful write
+            console.log(`Successfully wrote ${bufferToWrite.length} bytes of audio data`);
+        } catch (error) {
+            console.error('Error writing audio buffer:', error);
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+
     private processAndWriteBuffer(): void {
+        return this.processAndWriteBufferWithGain();
+        // return this.processAndWriteBufferSimple();
+    }
+
+    private processAndWriteBufferWithGain(): void {
         if (this.isProcessing || this.audioBuffer.length === 0) return;
 
         this.isProcessing = true;
@@ -110,16 +158,16 @@ export class AudioManager {
             this.isProcessing = false;
         }
     }
-
     private processAudioSamples(samples: Int16Array, maxAmplitude: number): Buffer {
         const processedSamples = new Int16Array(samples.length);
+        const GAIN = 0.1; // Gain factor for normalization
         // Reduce normalization intensity
-        const normalizeRatio = maxAmplitude > 0 ? (32767 / maxAmplitude) * 0.7 : 1;
+        const normalizeRatio = maxAmplitude > 0 ? (32767 / maxAmplitude) * GAIN : 1;
         const noiseFloor = 15; // Increased noise floor
-        const maxVal = 32767 * 0.8; // Reduced maximum value to prevent clipping
+        const maxVal = 32767 * 0.6; // Reduced maximum value to prevent clipping
         
         let prevSample = 0; // For simple low-pass filter
-        const smoothingFactor = 0.3; // Adjust between 0 and 1
+        const smoothingFactor = 0.1; // Adjust between 0 and 1
 
         for (let i = 0; i < samples.length; i++) {
             if (Math.abs(samples[i]) < noiseFloor) {

@@ -10,9 +10,11 @@
 #include "lib_wifi.h"
 #include "utils.h"
 #include "lib_speaker.h"
+#include "lib_button.h"
 #include "lib_websocket.h"
 
 int16_t sBuffer[bufferLen];
+ButtonChecker button;
 
 // Function declarations
 void setupLEDs();
@@ -46,7 +48,6 @@ void setup()
   delay(1000); // Add a small delay
 
   xTaskCreatePinnedToCore(micTask, "micTask", 10000, NULL, 2, NULL, 0);
-
 }
 
 // void checkConnections()
@@ -106,6 +107,30 @@ void loop()
   // }
   // handleSpeaker();
   // handleMicrophone();
+
+  button.loop();
+  if (button.justPressed())
+  {
+    Serial.println("Recording...");
+    sendMessage("START_RECORD");
+    // webSocket.sendTXT("{\"role\": \"user\", \"type\": \"audio\", \"format\": \"bytes.raw\", \"start\": true}");
+    // InitI2SSpeakerOrMic(MODE_MIC);
+    // recording = true;
+       sendButtonState(1);
+ // data_offset = 0;
+    Serial.println("Recording ready.");
+  }
+  else if (button.justReleased())
+  {
+    Serial.println("Stopped recording.");
+    // webSocket.sendTXT("{\"role\": \"user\", \"type\": \"audio\", \"format\": \"bytes.raw\", \"end\": true}");
+    // flush_microphone();
+    // recording = false;
+    // data_offset = 0;
+    sendButtonState(0);
+    sendMessage("STOP_RECORD");
+  }
+
   loopWebsocket();
   // if (isMicActive) {
   //   handleMicrophone();

@@ -66,6 +66,16 @@ void sendMessage(const char* message) {
     }
 }
 
+void sendButtonState(bool buttonState) {
+    if (client.available()) {
+        uint8_t buttonMessage = buttonState ? 1 : 0;
+        client.sendBinary((const char *)&buttonMessage, sizeof(buttonMessage));
+    } else {
+        Serial.println("WebSocket not connected - cannot send button state");
+    }
+}
+
+
 void sendBinaryData(const int16_t* buffer, size_t bytesIn) {
     if (client.available()) {
         // Convert int16_t buffer to char buffer
@@ -95,6 +105,6 @@ void loopWebsocket()
 //     reconnectWSServer();
 //   }
 
-  setButtonState();
+//   setButtonState();
 //   delay(1);
 }

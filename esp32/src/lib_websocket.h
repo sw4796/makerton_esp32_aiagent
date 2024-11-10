@@ -14,4 +14,5 @@ void checkWebSocketConnection();
 void sendBinaryData(const int16_t* buffer, size_t bytesIn);
 void sendMessage(const char* message);
 void loopWebsocket();
+void sendButtonState(bool buttonState);
 #endif
