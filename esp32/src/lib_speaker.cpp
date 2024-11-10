@@ -229,6 +229,14 @@ void playBuffer(int16_t *buffer, size_t samples)
     Serial.println("Error writing to I2S");
   }
 }
+// void speaker_play(uint8_t *payload, uint32_t len)
+// {
+//     Serial.printf("received %lu bytes", len);
+//     size_t bytes_written;
+//     InitI2SSpeakerOrMic(MODE_SPK);
+//     i2s_write(SPEAKER_I2S_NUMBER, payload, len,
+//             &bytes_written, portMAX_DELAY);
+// }
 
 void updateToneState()
 {

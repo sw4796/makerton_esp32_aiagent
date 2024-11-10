@@ -116,8 +116,8 @@ void loop()
     // webSocket.sendTXT("{\"role\": \"user\", \"type\": \"audio\", \"format\": \"bytes.raw\", \"start\": true}");
     // InitI2SSpeakerOrMic(MODE_MIC);
     // recording = true;
-       sendButtonState(1);
- // data_offset = 0;
+    sendButtonState(1);
+    // data_offset = 0;
     Serial.println("Recording ready.");
   }
   else if (button.justReleased())

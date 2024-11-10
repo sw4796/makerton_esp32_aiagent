@@ -12,8 +12,31 @@ export function createOpenAIWebSocket() {
 
 export const openaiClient = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-  });
-  
+});
+
+
+export async function createOpenAICompletion(fileBuffer: Buffer) {
+    const base64str = fileBuffer.toString('base64');
+
+    return await openaiClient.chat.completions.create({
+        model: "gpt-4o-audio-preview",
+        modalities: ["text", "audio"],
+        audio: { voice: "alloy", format: "wav" },
+        messages: [
+            {
+                role: "system",
+                content: "You are a helpful AI assistant. Your task is to listen to the audio input, transcribe it, and provide a relevant and concise response. If the audio is unclear or there's no speech detected, kindly ask for clarification."
+            },
+            {
+                role: "user",
+                content: [
+                    { type: "input_audio", input_audio: { data: base64str, format: "wav" } }
+                ]
+            }
+        ]
+    });
+}
+
 export function handleOpenAIConnection() {
     console.log("Connected to OpenAI server.");
 }

@@ -41,8 +41,8 @@ void detectSound(int16_t *buffer, size_t length)
     // Only log and send data if sound detected
     if (soundDetected)
     {
-      Serial.print("Peak amplitude: ");
-      Serial.println(maxAmplitude);
+      // Serial.print("Peak amplitude: ");
+      // Serial.println(maxAmplitude);
 
       // Send the actual buffer length, not 0
       // sendMessage("Hello");

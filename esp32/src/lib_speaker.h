@@ -11,6 +11,7 @@ void loopAudio();
 void setupAudio();
 void generateTone(int16_t *buffer, size_t samples);
 void writeToAudioBuffer(int16_t *buffer, size_t samples);
+void playBuffer(int16_t *buffer, size_t samples);
 void handleSpeaker();
 
 extern unsigned long lastMicActivity;

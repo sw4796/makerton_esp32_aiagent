@@ -123,6 +123,23 @@ export class AudioManager {
         }
     }
 
+    public getCurrentBuffer(): Buffer {
+        if (!this.fileWriter) {
+            console.error('No file writer available');
+            return Buffer.alloc(0);
+        }
+
+        try {
+            const audioFilePath = this.fileWriter.path;
+            const fileBuffer = fs.readFileSync(audioFilePath);
+            console.log(`Successfully read audio file: ${audioFilePath}`);
+            return fileBuffer;
+        } catch (error) {
+            console.error('Error reading current audio buffer:', error);
+            return Buffer.alloc(0);
+        }
+    }
+
     private processAndWriteBuffer(): void {
         return this.processAndWriteBufferWithGain();
         // return this.processAndWriteBufferSimple();
@@ -188,6 +205,9 @@ export class AudioManager {
 
         return Buffer.from(processedSamples.buffer);
     }
+    // public getCurrentBuffer(): Buffer {
+    //     return this.audioBuffer;
+    // }
 
     public closeFile(): void {
         console.log('Closing WAV file writer');

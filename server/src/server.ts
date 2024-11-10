@@ -11,6 +11,8 @@ const app = express();
 // Create WAV file writer
 import fs from 'fs';
 import { AudioManager } from './audio';
+import { createOpenAICompletion } from './openai';
+import { base64ToWavBuffer } from './speech';
 
 const WS_PORT = parseInt(process.env.WS_PORT || "8888");
 const MONITOR_WS_PORT = parseInt(process.env.MONITOR_WS_PORT || "8899");
@@ -39,7 +41,7 @@ let recording: boolean = false;
 
 const audioManager = new AudioManager();
 
-function handleButtonStateChange(ws: WebSocket, buttonState: boolean) {
+async function handleButtonStateChange(ws: WebSocket, buttonState: boolean) {
   console.log(`Button ${buttonState ? "pressed" : "released"}`);
   ws.send(JSON.stringify({
     type: "button_state_change",
@@ -53,6 +55,15 @@ function handleButtonStateChange(ws: WebSocket, buttonState: boolean) {
     if (recording) {
       audioManager.closeFile();
       recording = false;
+
+      const buffer = audioManager.getCurrentBuffer();
+      const res = await createOpenAICompletion(buffer);
+      console.log('OpenAI completion response:', JSON.stringify(res, null, 2));
+      const bufferReceived = base64ToWavBuffer(res.choices[0]?.message?.audio?.data ?? '');
+      console.log('Received audio buffer from OpenAI:', bufferReceived?.length, 'bytes');
+      if (bufferReceived) {
+        broadcastAudioToClients(bufferReceived);
+      }
     }
   }
 }
@@ -61,6 +72,23 @@ function handleAudioData(data: Buffer) {
   if (recording) {
     audioManager.handleAudioBuffer(data);
   }
+}
+
+function broadcastAudioToClients(buffer: Buffer) {
+  const CHUNK_SIZE = 1024; // Send 1KB chunks
+  const DELAY_MS = 50; // 50ms delay between chunks
+
+  deviceClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      // Split buffer into chunks and send with delay
+      for (let i = 0; i < buffer.length; i += CHUNK_SIZE) {
+        const chunk = buffer.slice(i, i + CHUNK_SIZE);
+        setTimeout(() => {
+          client.send(chunk);
+        }, (i / CHUNK_SIZE) * DELAY_MS);
+      }
+    }
+  });
 }
 
 wsServer.on("connection", (ws: WebSocket, req) => {
