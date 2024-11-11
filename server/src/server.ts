@@ -11,7 +11,7 @@ const app = express();
 // Create WAV file writer
 import fs from 'fs';
 import { AudioManager, SampleRate } from './audio';
-import { createOpenAICompletion } from './openai';
+import { createOpenAICompletion, createOpenAICompletionStream } from './openai';
 import { base64ToWavBuffer } from './speech';
 
 const WS_PORT = parseInt(process.env.WS_PORT || "8888");
@@ -42,36 +42,92 @@ let recording: boolean = false;
 const audioManager = new AudioManager();
 
 async function handleButtonStateChange(ws: WebSocket, buttonState: boolean) {
-  console.log(`Button ${buttonState ? "pressed" : "released"}`);
-  ws.send(JSON.stringify({
-    type: "button_state_change",
-    state: buttonState ? "pressed" : "released"
-  }));
-
+  notifyButtonStateChange(ws, buttonState);
+  
   if (buttonState) {
-    recording = true;
-    audioManager.startRecording();
+    startRecordingSession();
   } else {
     if (recording) {
-      audioManager.closeFile();
-      recording = false;
-
-      const buffer = audioManager.getCurrentBuffer();
-      let res;
-      try {
-        res = await createOpenAICompletion(buffer);
-      } catch (error) {
-        console.error('Error creating OpenAI completion:', error);
-        return;
-      }
-      console.log('OpenAI completion response:', JSON.stringify(res, null, 2));
-      const bufferReceived = base64ToWavBuffer(res.choices[0]?.message?.audio?.data ?? '', SampleRate.RATE_22050);
-      console.log('Received audio buffer from OpenAI:', bufferReceived?.length, 'bytes');
-      if (bufferReceived) {
-        broadcastAudioToClients(bufferReceived);
-      }
+      await stopRecordingAndProcessAudioAsStream();
+      // await stopRecordingAndProcessAudio();
     }
   }
+}
+
+function notifyButtonStateChange(ws: WebSocket, buttonState: boolean) {
+  console.log(`Button ${buttonState ? "pressed" : "released"}`);
+  ws.send(JSON.stringify({
+    type: "button_state_change", 
+    state: buttonState ? "pressed" : "released"
+  }));
+}
+
+function startRecordingSession() {
+  recording = true;
+  audioManager.startRecording();
+}
+
+async function stopRecordingAndProcessAudio() {
+  audioManager.closeFile();
+  recording = false;
+
+  const buffer = audioManager.getCurrentBuffer();
+  const response = await processAudioWithOpenAI(buffer);
+  
+  if (response) {
+    broadcastAudioToClients(response);
+  }
+}
+async function stopRecordingAndProcessAudioAsStream() {
+  audioManager.closeFile();
+  recording = false;
+
+  const buffer = audioManager.getCurrentBuffer();
+  await processAudioWithOpenAIStream(buffer);
+  // No need to broadcast here since processAudioWithOpenAIStream handles it
+}
+
+async function processAudioWithOpenAI(buffer: Buffer): Promise<Buffer | null> {
+  try {
+    const res = await createOpenAICompletion(buffer);
+    console.log('OpenAI completion response:', JSON.stringify(res, null, 2));
+    
+    const audioBuffer = base64ToWavBuffer(res.choices[0]?.message?.audio?.data ?? '', SampleRate.RATE_22050);
+    console.log('Received audio buffer from OpenAI:', audioBuffer?.length, 'bytes');
+    
+    return audioBuffer || null;
+  } catch (error) {
+    console.error('Error creating OpenAI completion:', error);
+    return null;
+  }
+}
+async function processAudioWithOpenAIStream(buffer: Buffer) {
+    try {
+        const stream = await createOpenAICompletionStream(buffer);
+        console.log('Starting to process audio stream from OpenAI');
+        
+        for await (const chunk of stream) {
+            const audioData = extractAudioFromChunk(chunk);
+            if (audioData) {
+                broadcastStreamAudioToClients(audioData);
+            }
+        }
+        
+        return null; // Streaming mode - no buffer return needed
+    } catch (error) {
+        console.error('Error creating OpenAI completion stream:', error);
+        return null;
+    }
+}
+
+function extractAudioFromChunk(chunk: any): Buffer | null {
+    const delta = chunk.choices[0]?.delta;
+    if (!delta?.audio?.data) {
+        return null;
+    }
+
+    console.log('Received audio chunk:', delta.audio.data.length, 'bytes');
+    return Buffer.from(delta.audio.data, 'base64');
 }
 
 function handleAudioData(data: Buffer) {
@@ -82,7 +138,7 @@ function handleAudioData(data: Buffer) {
 
 function broadcastAudioToClients(buffer: Buffer) {
   const CHUNK_SIZE = 2048; // Send 1KB chunks
-  const DELAY_MS = 0; // 50ms delay between chunks
+  const DELAY_MS = 10; // 50ms delay between chunks
 
   deviceClients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
@@ -94,6 +150,23 @@ function broadcastAudioToClients(buffer: Buffer) {
           client.send(chunk);
         }, (i / CHUNK_SIZE) * DELAY_MS);
       }
+    }
+  });
+}
+function broadcastStreamAudioToClients(buffer: Buffer) {
+  const CHUNK_SIZE = 2048; // Send 1KB chunks
+  const DELAY_MS = 10; // 50ms delay between chunks
+
+  deviceClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(buffer);
+      // Split buffer into chunks and send with delay
+      // for (let i = 0; i < buffer.length; i += CHUNK_SIZE) {
+      //   const chunk = buffer.slice(i, i + CHUNK_SIZE);
+      //   setTimeout(() => {
+      //     client.send(chunk);
+      //   }, (i / CHUNK_SIZE) * DELAY_MS);
+      // }
     }
   });
 }
