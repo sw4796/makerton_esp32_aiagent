@@ -4,8 +4,9 @@
 #include <Arduino.h>
 
 void detectSound(int16_t *buffer, size_t length);
-void setupMicrophone();
-void handleMicrophone();
+esp_err_t setupMicrophone();
+esp_err_t handleMicrophone();
 void micTask(void *parameter);
+void setRecording(bool recording);
 
 #endif

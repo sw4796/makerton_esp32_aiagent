@@ -4,11 +4,19 @@
 #include "lib_websocket.h"
 #include "utils.h"
 #include "config.h"
+#include <esp_task_wdt.h>
 
 // Global flags for system state
 bool isSpeakerBusy = false;
 bool isWebSocketConnected = true;
 int16_t soundBuffer[bufferLen];
+
+bool isRecording = false;
+
+void setRecording(bool recording)
+{
+  isRecording = recording;
+}
 
 void detectSound(int16_t *buffer, size_t length)
 {
@@ -51,20 +59,18 @@ void detectSound(int16_t *buffer, size_t length)
   // sendBinaryData(buffer, length * sizeof(int16_t));
 }
 
-void setupMicrophone()
+esp_err_t setupMicrophone()
 {
-  // First uninstall any existing driver
-  i2s_driver_uninstall(I2S_PORT_MIC);
-
+  // i2s_driver_uninstall(I2S_PORT_MIC);
   i2s_config_t i2s_config = {
-      .mode = i2s_mode_t(I2S_MODE_MASTER | I2S_MODE_RX), // Make sure this is RX only
-      .sample_rate = AUDIO_QUALITY_SPEAKER,
+      .mode = i2s_mode_t(I2S_MODE_MASTER | I2S_MODE_RX),
+      .sample_rate = AUDIO_QUALITY_MIC,
       .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
       .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
       .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_STAND_I2S),
       .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-      .dma_buf_count = bufferCnt,
-      .dma_buf_len = bufferLen,
+      .dma_buf_count = 8,
+      .dma_buf_len = 64,
       .use_apll = false,
       .tx_desc_auto_clear = false,
       .fixed_mclk = 0};
@@ -79,29 +85,29 @@ void setupMicrophone()
   if (I2S_PORT_MIC < I2S_NUM_0 || I2S_PORT_MIC >= I2S_NUM_MAX)
   {
     Serial.println("Invalid I2S port number");
-    return;
+    return ESP_ERR_INVALID_ARG;
   }
 
   esp_err_t result = i2s_driver_install(I2S_PORT_MIC, &i2s_config, 0, NULL);
   if (result != ESP_OK)
   {
     Serial.printf("Error installing I2S driver: %s\n", esp_err_to_name(result));
-    return;
+    return result;
   }
 
   result = i2s_set_pin(I2S_PORT_MIC, &pin_config);
   if (result != ESP_OK)
   {
     Serial.printf("Error setting I2S pins: %s\n", esp_err_to_name(result));
-    // Clean up if pin config fails
     i2s_driver_uninstall(I2S_PORT_MIC);
-    return;
+    return result;
   }
 
   Serial.println("I2S microphone initialized successfully");
+  return ESP_OK;
 }
 
-void handleMicrophone()
+esp_err_t handleMicrophone()
 {
   size_t bytes_read = 0;
   const size_t bufferSize = bufferLen;
@@ -110,10 +116,8 @@ void handleMicrophone()
   if (!buffer)
   {
     Serial.println("Failed to allocate memory for audio buffer");
-    vTaskDelete(NULL);
-    return;
+    return ESP_ERR_NO_MEM;
   }
-  // return;
 
   esp_err_t result = i2s_read(I2S_PORT_MIC, buffer, bufferSize * sizeof(int16_t), &bytes_read, portMAX_DELAY);
   if (result == ESP_OK && bytes_read > 0)
@@ -122,34 +126,33 @@ void handleMicrophone()
   }
 
   free(buffer);
+  return result;
 }
 
-void micTask(void *parameter)
-{
-  // No need to install/setup since it's already done in setupMicrophone()
-  size_t bytesIn = 0;
-  // const size_t bufferSize = bufferLen;
-  // int16_t *buffer = (int16_t *)audio_malloc(bufferSize * sizeof(int16_t));
-
-  // if (!buffer) {
-  //     Serial.println("Failed to allocate memory for audio buffer");
-  //     vTaskDelete(NULL);
-  //     return;
-  // }
-
-  while (1)
-  {
-    esp_err_t result = i2s_read(I2S_PORT_MIC, &soundBuffer, bufferLen, &bytesIn, portMAX_DELAY);
-    detectSound(soundBuffer, bytesIn / sizeof(int16_t));
-    if (result == ESP_OK && isWebSocketConnected)
-    {
-      sendBinaryData(soundBuffer, bytesIn);
+void micTask(void *parameter) {
+    while (true) {
+        vTaskDelay(pdMS_TO_TICKS(1));
+        
+        if (isRecording) {
+            size_t bytesIn = 0;
+            esp_err_t result = i2s_read(I2S_PORT_MIC, &soundBuffer, bufferLen, &bytesIn, portMAX_DELAY);
+            
+            if (result == ESP_OK) {
+                detectSound(soundBuffer, bytesIn / sizeof(int16_t));
+                if (isWebSocketConnected) {
+                    sendBinaryData(soundBuffer, bytesIn);
+                }
+            } else {
+                Serial.printf("I2S read error: %d\n", result);
+                delay(100);  // Add delay on error
+            }
+            
+            esp_task_wdt_reset();
+            vTaskDelay(pdMS_TO_TICKS(1));
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
     }
-    // taskYIELD();
-  }
-
-  // free(buffer);
-  // vTaskDelete(NULL);
 }
 // void micTask(void *parameter)
 // {

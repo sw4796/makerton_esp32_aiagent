@@ -8,7 +8,13 @@ interface AudioConfig {
     channels: number;
     bitDepth: number;
 }
-
+export enum SampleRate {
+    RATE_16000 = 16000,
+    RATE_44100 = 44100,
+    RATE_24000 = 24000, 
+    RATE_22050 = 22050
+  }
+  
 export class AudioManager {
     private configMediumDef: AudioConfig = {
         sampleRate: 24000, // Match ESP32 sample rate from audioConfig[44100]
@@ -141,8 +147,8 @@ export class AudioManager {
     }
 
     private processAndWriteBuffer(): void {
-        return this.processAndWriteBufferWithGain();
-        // return this.processAndWriteBufferSimple();
+        // return this.processAndWriteBufferWithGain();
+        return this.processAndWriteBufferSimple();
     }
 
     private processAndWriteBufferWithGain(): void {

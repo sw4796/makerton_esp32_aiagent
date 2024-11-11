@@ -9,14 +9,15 @@ enum AudioMode {
   MODE_SPK
 };
 void InitI2SSpeakerOrMic(AudioMode mode);
-void setupSpeakerI2S();
-void setupSpeaker();
+esp_err_t setupSpeakerI2S();
 void loopAudio();
 void setupAudio();
 void generateTone(int16_t *buffer, size_t samples);
 void writeToAudioBuffer(int16_t *buffer, size_t samples);
 void playBuffer(int16_t *buffer, size_t samples);
 void handleSpeaker();
+void playBufferWithOffset(uint8_t *payload, size_t length);
+void speaker_play(uint8_t *payload, uint32_t len);
 
 extern unsigned long lastMicActivity;
 extern unsigned long lastSpkrActivity; 

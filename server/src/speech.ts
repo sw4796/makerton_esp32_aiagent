@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import openai from 'openai';
 import { createOpenAICompletion, openaiClient } from './openai';
+import { SampleRate } from './audio';
 // import { openai } from './config.cjs';
 // import { audioToItemCreateEvent } from './audioUtils.cjs';
 // import { sendResponseCreateEvent } from './websocketUtils.cjs';
@@ -86,10 +87,10 @@ async function readAudioFile(audioFilePath: string): Promise<Buffer | null> {
   return fileBuffer;
 }
 
-function base64ToWavBuffer(base64String: string): Buffer | null {
+function base64ToWavBuffer(base64String: string, sampleRate?: SampleRate): Buffer | null {
   try {
     const buffer = Buffer.from(base64String, 'base64');
-    const wavHeader = createWavHeader(buffer.length);
+    const wavHeader = createWavHeader(buffer.length, sampleRate);
     return Buffer.concat([wavHeader, buffer]);
   } catch (error) {
     console.error('Error converting base64 to WAV buffer:', error);
@@ -97,8 +98,45 @@ function base64ToWavBuffer(base64String: string): Buffer | null {
   }
 }
 
-function createWavHeader(dataLength: number): Buffer {
+function base64ToWavBuffer44100(base64String: string): Buffer | null {
+  try {
+    const buffer = Buffer.from(base64String, 'base64');
+    const wavHeader = createWavHeader(buffer.length, SampleRate.RATE_44100);
+    return Buffer.concat([wavHeader, buffer]);
+  } catch (error) {
+    console.error('Error converting base64 to WAV buffer:', error);
+    return null;
+  }
+}
+
+function base64ToWavBuffer24000(base64String: string): Buffer | null {
+  try {
+    const buffer = Buffer.from(base64String, 'base64');
+    const wavHeader = createWavHeader(buffer.length, SampleRate.RATE_24000);
+    return Buffer.concat([wavHeader, buffer]);
+  } catch (error) {
+    console.error('Error converting base64 to WAV buffer:', error);
+    return null;
+  }
+}
+
+function base64ToWavBuffer22050(base64String: string): Buffer | null {
+  try {
+    const buffer = Buffer.from(base64String, 'base64');
+    const wavHeader = createWavHeader(buffer.length, SampleRate.RATE_22050);
+    return Buffer.concat([wavHeader, buffer]);
+  } catch (error) {
+    console.error('Error converting base64 to WAV buffer:', error);
+    return null;
+  }
+}
+
+function createWavHeader(dataLength: number, sampleRate: SampleRate = SampleRate.RATE_24000): Buffer {
   const wavHeader = Buffer.alloc(44);
+  const numChannels = 1; // Mono
+  const bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * bitsPerSample/8;
+  const blockAlign = numChannels * bitsPerSample/8;
   
   // RIFF chunk descriptor
   wavHeader.write('RIFF', 0);
@@ -107,13 +145,13 @@ function createWavHeader(dataLength: number): Buffer {
 
   // Format chunk
   wavHeader.write('fmt ', 12);
-  wavHeader.writeUInt32LE(16, 16);
-  wavHeader.writeUInt16LE(1, 20);
-  wavHeader.writeUInt16LE(1, 22);
-  wavHeader.writeUInt32LE(44100, 24);
-  wavHeader.writeUInt32LE(44100 * 2, 28);
-  wavHeader.writeUInt16LE(2, 32);
-  wavHeader.writeUInt16LE(16, 34);
+  wavHeader.writeUInt32LE(16, 16); // Subchunk1Size
+  wavHeader.writeUInt16LE(1, 20); // AudioFormat (PCM)
+  wavHeader.writeUInt16LE(numChannels, 22);
+  wavHeader.writeUInt32LE(sampleRate, 24);
+  wavHeader.writeUInt32LE(byteRate, 28);
+  wavHeader.writeUInt16LE(blockAlign, 32);
+  wavHeader.writeUInt16LE(bitsPerSample, 34);
 
   // Data chunk
   wavHeader.write('data', 36);

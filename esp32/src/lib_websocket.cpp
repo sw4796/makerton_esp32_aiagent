@@ -29,8 +29,11 @@ void onMessageCallback(WebsocketsMessage message)
     }
 
     Serial.printf("Received binary audio data of length: %zu bytes\n", length);
-    playBuffer((int16_t*)payload, length);
+    speaker_play(payload, length);
+    // playBufferWithOffset(payload, length);
+    // playBuffer((int16_t*)payload, length);
     delay(10);
+    // InitI2SSpeakerOrMic(MODE_MIC);
 }
 
 void onEventsCallback(WebsocketsEvent event, String data)

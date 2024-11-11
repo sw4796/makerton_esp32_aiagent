@@ -60,12 +60,13 @@ const LedThreshold ledThresholds[] = {
 enum AudioQuality
 {
   LOW_DEFINITION = 16000,
+  OPENAI_DEFINITION = 22050,
   MID_DEFINITION = 24000,
   HIGH_DEFINITION = 44100,
   ULTRA_HIGH_DEFINITION = 96000
 };
 
-const AudioQuality AUDIO_QUALITY_SPEAKER = AudioQuality::HIGH_DEFINITION;
+const AudioQuality AUDIO_QUALITY_SPEAKER = AudioQuality::LOW_DEFINITION;
 const AudioQuality AUDIO_QUALITY = AudioQuality::HIGH_DEFINITION;
 const AudioQuality AUDIO_QUALITY_MIC = AudioQuality::HIGH_DEFINITION;
 

@@ -10,7 +10,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 const app = express();
 // Create WAV file writer
 import fs from 'fs';
-import { AudioManager } from './audio';
+import { AudioManager, SampleRate } from './audio';
 import { createOpenAICompletion } from './openai';
 import { base64ToWavBuffer } from './speech';
 
@@ -57,9 +57,15 @@ async function handleButtonStateChange(ws: WebSocket, buttonState: boolean) {
       recording = false;
 
       const buffer = audioManager.getCurrentBuffer();
-      const res = await createOpenAICompletion(buffer);
+      let res;
+      try {
+        res = await createOpenAICompletion(buffer);
+      } catch (error) {
+        console.error('Error creating OpenAI completion:', error);
+        return;
+      }
       console.log('OpenAI completion response:', JSON.stringify(res, null, 2));
-      const bufferReceived = base64ToWavBuffer(res.choices[0]?.message?.audio?.data ?? '');
+      const bufferReceived = base64ToWavBuffer(res.choices[0]?.message?.audio?.data ?? '', SampleRate.RATE_22050);
       console.log('Received audio buffer from OpenAI:', bufferReceived?.length, 'bytes');
       if (bufferReceived) {
         broadcastAudioToClients(bufferReceived);
@@ -75,11 +81,12 @@ function handleAudioData(data: Buffer) {
 }
 
 function broadcastAudioToClients(buffer: Buffer) {
-  const CHUNK_SIZE = 1024; // Send 1KB chunks
-  const DELAY_MS = 50; // 50ms delay between chunks
+  const CHUNK_SIZE = 2048; // Send 1KB chunks
+  const DELAY_MS = 0; // 50ms delay between chunks
 
   deviceClients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
+      // client.send(buffer);
       // Split buffer into chunks and send with delay
       for (let i = 0; i < buffer.length; i += CHUNK_SIZE) {
         const chunk = buffer.slice(i, i + CHUNK_SIZE);
