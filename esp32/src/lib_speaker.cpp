@@ -6,6 +6,8 @@
 #include "config.h"
 #include "lib_speaker.h"
 #include "lib_websocket.h"
+#include "lib_button.h"
+#include "mic.h"
 
 // Constants
 const size_t SAMPLES_PER_WRITE = 1024;
@@ -61,7 +63,17 @@ esp_err_t configureI2S(const i2s_config_t &config, const i2s_pin_config_t &pins)
 
   return ESP_OK;
 }
-
+void InitI2SSpeakerOrMic(AudioMode mode) {
+  if (mode == MODE_MIC) {
+    i2s_driver_uninstall(I2S_PORT_SPEAKER);
+    setupMicrophone();
+    i2s_start(I2S_PORT_MIC);
+  } else {
+    i2s_driver_uninstall(I2S_PORT_MIC); 
+    setupSpeakerI2S();
+    i2s_start(I2S_PORT_SPEAKER);
+  }
+}
 void setupSpeakerI2S()
 {
   i2s_config_t i2s_config = {

@@ -4,7 +4,11 @@
 #include <Audio.h>
 #include <Arduino.h>
 // #include "audioBuffer.h"
-
+enum AudioMode {
+  MODE_MIC,
+  MODE_SPK
+};
+void InitI2SSpeakerOrMic(AudioMode mode);
 void setupSpeakerI2S();
 void setupSpeaker();
 void loopAudio();
