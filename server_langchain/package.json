@@ -8,14 +8,18 @@
     "@hono/node-ws": "^1.0.4",
     "@langchain/community": "^0.3.4",
     "@langchain/core": "^0.3.7",
+    "audio-decode": "^2.2.2",
+    "clipboardy": "^4.0.0",
     "dotenv": "^16.4.5",
     "hono": "^4.6.3",
+    "wav": "^1.0.2",
     "ws": "^8.18.0",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.23.3"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
+    "@types/wav": "^1.0.4",
     "@types/ws": "^8.5.12",
     "tsx": "^4.7.1"
   },

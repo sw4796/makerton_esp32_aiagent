@@ -1,4 +1,7 @@
 import WebSocket from "ws";
+import fs from 'fs';
+import decodeAudio from 'audio-decode';
+import { AudioHandler } from "./agent";
 
 /**
  * Merge multiple streams into one stream.
@@ -68,10 +71,121 @@ export async function* createStreamFromWebsocket(ws: WebSocket) {
         });
       }
 
-      yield JSON.parse(message);
+      try {
+        yield JSON.parse(message);
+      } catch (e) {
+        // Skip messages that can't be parsed as JSON
+        yield message;
+      }
     }
   } finally {
     ws.off("message", onMessage);
     ws.off("error", onError);
   }
+}
+
+
+export function createAsyncIterableFromWebSocket(ws: WebSocket): AsyncIterable<string> {
+  return {
+      [Symbol.asyncIterator]() {
+          return {
+              async next() {
+                  try {
+                      const value = await new Promise<string>((resolve, reject) => {
+                          ws.addEventListener('message', (data) => {
+                              if (data instanceof Buffer) {
+                                  resolve(data.toString('base64'));
+                              } else {
+                                  resolve(data.toString());
+                              }
+                          });
+                          ws.addEventListener('error', reject);
+                          ws.addEventListener('close', () => resolve(''));
+                      });
+                      
+                      return { done: value === '', value };
+                  } catch (error) {
+                      return { done: true, value: undefined };
+                  }
+              }
+          };
+      }
+  };
+}
+
+
+// Converts Float32Array of audio data to PCM16 ArrayBuffer
+function floatTo16BitPCM(float32Array: Float32Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(float32Array.length * 2);
+  const view = new DataView(buffer);
+  let offset = 0;
+  for (let i = 0; i < float32Array.length; i++, offset += 2) {
+    let s = Math.max(-1, Math.min(1, float32Array[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return buffer;
+}
+
+// Converts a Float32Array to base64-encoded PCM16 data
+export function base64EncodeAudio(float32Array: Float32Array): string {
+  const arrayBuffer = floatTo16BitPCM(float32Array);
+  let binary = '';
+  let bytes = new Uint8Array(arrayBuffer);
+  const chunkSize = 0x8000; // 32KB chunk size
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    let chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  return btoa(binary);
+}
+
+
+export const appendToBuffer = (newData: Uint8Array, handler: AudioHandler): void => {
+  const newBuffer = new Uint8Array(handler.buffer.length + newData.length);
+  newBuffer.set(handler.buffer);
+  newBuffer.set(newData, handler.buffer.length);
+  handler.buffer = newBuffer;
+};
+export const processAudioBuffer = (buffer: Buffer): Buffer => {
+  // Convert Int16 PCM to Float32
+  // return buffer;
+  const int16Data = new Int16Array(buffer.buffer);
+  const float32Data = new Float32Array(int16Data.length);
+
+  for (let i = 0; i < int16Data.length; i++) {
+    float32Data[i] = int16Data[i] / 32768.0;
+  }
+
+
+  return Buffer.from(float32Data.buffer);
+}
+
+export function convertAudioToPCM16(audioFile: Buffer, sourceRate: number = 44100, targetRate: number = 24000): string {
+  // Convert audio file to PCM16 24kHz mono format from 44.1kHz
+  const audioBuffer = audioFile.buffer;
+  const view = new DataView(audioBuffer);
+  const ratio = sourceRate / targetRate;
+
+  // Calculate resampled length
+  const resampledLength = Math.floor(audioBuffer.byteLength / 2 / ratio);
+  const pcm16Data = new Int16Array(resampledLength);
+
+  // Simple linear interpolation resampling
+  for (let i = 0; i < resampledLength; i++) {
+    const sourceIndex = i * ratio;
+    const sourceIndexInt = Math.floor(sourceIndex);
+    const fraction = sourceIndex - sourceIndexInt;
+
+    // Get samples for interpolation
+    const sample1 = view.getInt16(sourceIndexInt * 2, true);
+    const sample2 = sourceIndexInt < (audioBuffer.byteLength / 2 - 1) ?
+      view.getInt16((sourceIndexInt + 1) * 2, true) : sample1;
+
+    // Linear interpolation
+    pcm16Data[i] = Math.round(sample1 * (1 - fraction) + sample2 * fraction);
+  }
+
+  // Convert to base64
+  const uint8Array = new Uint8Array(pcm16Data.buffer);
+  return Buffer.from(uint8Array).toString('base64');
 }
