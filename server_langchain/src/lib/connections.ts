@@ -110,12 +110,13 @@ class OpenAIWebSocketConnection {
         // Log incoming audio data details
         console.log('Received audio data length:', data.length);
         if (data.length > 0) {
-            console.log('First byte:', data[0]);
-            console.log('Last byte:', data[data.length - 1]);
+            // console.log('First byte:', data[0]);
+            // console.log('Last byte:', data[data.length - 1]);
         }
         // Only process audio when recording is active
         if (!this.isRecording) {
-            return;
+            console.log('Skipping audio processing - recording is not active');
+            // return;
         }
 
         if (data.length === 1) {
@@ -143,10 +144,10 @@ class OpenAIWebSocketConnection {
         // const alignedBuffer = data.length % 2 === 0 ? data : Buffer.concat([data, Buffer.alloc(1)]);
         // const processedBuffer = processAudioBuffer(alignedBuffer);
         // Send to OpenAI
-        this.sendEvent({
-            type: "input_audio_buffer.append",
-            audio: b64
-        });
+        // this.sendEvent({
+        //     type: "input_audio_buffer.append",
+        //     audio: b64
+        // });
     }
 }
 

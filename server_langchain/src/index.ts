@@ -40,7 +40,12 @@ app.get(
               const parsed = JSON.parse(data);
               if (parsed.type === "response.audio.delta" && parsed.delta) {
                 const audioBuffer = Buffer.from(parsed.delta, 'base64');
-                client.send(audioBuffer);
+                // Send audio data in chunks that ESP32 can handle
+                const CHUNK_SIZE = 1024; // ESP32 friendly chunk size
+                for (let i = 0; i < audioBuffer.length; i += CHUNK_SIZE) {
+                    const chunk = audioBuffer.slice(i, i + CHUNK_SIZE);
+                    client.send(chunk);
+                }
                 return;
               }
             } catch (e) {

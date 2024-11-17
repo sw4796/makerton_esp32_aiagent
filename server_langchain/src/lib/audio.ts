@@ -9,41 +9,44 @@ export interface AudioConfig {
     channels: number;
     bitDepth: number;
 }
+
 export enum SampleRate {
     RATE_16000 = 16000,
     RATE_44100 = 44100,
-    RATE_24000 = 24000, 
+    RATE_24000 = 24000,
     RATE_22050 = 22050
-  }
-  
+}
+
 export class AudioManager {
     private configMediumDef: AudioConfig = {
-        sampleRate: 24000, // Match ESP32 sample rate from audioConfig[44100]
-        channels: 1,       // Mono audio from audioConfig
-        bitDepth: 16      // 16-bit audio for Int16 codec
+        sampleRate: 24000,
+        channels: 1,
+        bitDepth: 16
     };
 
     private configLowDef: AudioConfig = {
-        sampleRate: 16000, // Match ESP32 sample rate from audioConfig[16000]
-        channels: 1,       // Mono audio from audioConfig
-        bitDepth: 16      // 16-bit audio for Int16 codec
+        sampleRate: 16000,
+        channels: 1,
+        bitDepth: 16
     };
 
     private configHighDef: AudioConfig = {
-        sampleRate: 44100, // High definition sample rate
-        channels: 1,       // Mono audio
-        bitDepth: 16      // 16-bit audio for Int16 codec
+        sampleRate: 44100,
+        channels: 1,
+        bitDepth: 16
     };
+
     private configUltraHighDef: AudioConfig = {
-        sampleRate: 96000, // Ultra high definition sample rate
-        channels: 1,       // Mono audio
-        bitDepth: 16      // 16-bit audio for Int16 codec
+        sampleRate: 96000,
+        channels: 1,
+        bitDepth: 16
     };
+
     private fileWriter: wav.FileWriter | undefined;
     private writeTimeout: NodeJS.Timeout | null = null;
     private isProcessing: boolean = false;
-
     private config = this.configHighDef;
+
     constructor() {
         // Don't initialize file writer in constructor
     }
@@ -56,13 +59,34 @@ export class AudioManager {
         });
     }
 
+    public resetRecording(): void {
+        if (this.writeTimeout) {
+            clearTimeout(this.writeTimeout);
+            this.writeTimeout = null;
+        }
+        
+        // Close existing file writer if any
+        if (this.fileWriter) {
+            this.fileWriter.end();
+            this.fileWriter = undefined;
+        }
+        
+        // Reset buffer and processing state
+        this.audioBuffer = Buffer.alloc(0);
+        this.isProcessing = false;
+    }
+
     public startRecording() {
+        // Reset any existing recording state
+        this.resetRecording();
+        
         // Generate random ID for filename
         const randomId = Math.random().toString(36).substring(2, 15);
         const filename = path.join(__dirname, '../../tmp', `recording-${randomId}.wav`);
         
         // Initialize new file writer with random filename
         this.initializeFileWriter(filename);
+        console.log('Started new recording:', filename);
     }
 
     private audioBuffer: Buffer = Buffer.alloc(0);
@@ -70,8 +94,7 @@ export class AudioManager {
     private readonly MAX_BUFFER_SIZE = 1024 * 1024; // 1MB max buffer size to prevent memory issues
     private readonly MIN_BUFFER_SIZE = this.config.sampleRate; // 1 second worth of audio data
 
-    
-    public handleAudioBuffer(buffer: Buffer, ws?: WebSocket): void {
+    public handleAudioBuffer(buffer: Buffer): void {
         try {
             // Check if adding new buffer would exceed max size
             if (this.audioBuffer.length + buffer.length > this.MAX_BUFFER_SIZE) {
@@ -111,7 +134,20 @@ export class AudioManager {
     }
 
     private processAndWriteBufferSimple(): void {
-        if (!this.fileWriter || this.audioBuffer.length === 0 || this.isProcessing) return;
+        // Log the current state before processing
+        console.log('******Processing audio buffer:', {
+            bufferSize: this.audioBuffer.length,
+            hasFileWriter: !!this.fileWriter,
+            isProcessing: this.isProcessing
+        });
+        if (!this.fileWriter || this.audioBuffer.length === 0 || this.isProcessing) {
+            console.log('Skipping write - conditions not met:', {
+                hasFileWriter: !!this.fileWriter,
+                bufferLength: this.audioBuffer.length,
+                isProcessing: this.isProcessing
+            });
+            return;
+        }
 
         try {
             this.isProcessing = true;
@@ -212,20 +248,19 @@ export class AudioManager {
 
         return Buffer.from(processedSamples.buffer);
     }
-    // public getCurrentBuffer(): Buffer {
-    //     return this.audioBuffer;
-    // }
 
     public closeFile(): void {
         console.log('Closing WAV file writer');
         if (this.writeTimeout) {
             clearTimeout(this.writeTimeout);
         }
+        // Process any remaining audio data
         if (this.audioBuffer.length > 0) {
             this.processAndWriteBuffer();
         }
-        if (this.fileWriter) {
-            this.fileWriter.end();
-        }
+        // if (this.fileWriter) {
+        //     this.fileWriter.end();
+        //     this.fileWriter = undefined; // Clear the reference
+        // }
     }
 }
