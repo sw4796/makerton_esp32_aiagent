@@ -258,8 +258,6 @@ export class OpenAIVoiceReactAgent {
         sendOutputChunk: (chunk: string) => void | Promise<void>
     ): Promise<void> {
         const data = typeof dataRaw === "string" ? dataRaw : dataRaw;
-        console.log(`Processing stream event - Key: ${streamKey}, Data:`, data.type);
-        data?.item?.content && console.log(`Processing stream event - Content:`, data?.item?.content);
 
         if (data === "START_RECORD") {
             this.startRecordingSession();

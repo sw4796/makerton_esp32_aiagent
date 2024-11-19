@@ -106,48 +106,8 @@ class OpenAIWebSocketConnection {
         }
     }
 
-    async handleIncomingAudio(data: Buffer) {
-        // Log incoming audio data details
-        console.log('Received audio data length:', data.length);
-        if (data.length > 0) {
-            // console.log('First byte:', data[0]);
-            // console.log('Last byte:', data[data.length - 1]);
-        }
-        // Only process audio when recording is active
-        if (!this.isRecording) {
-            console.log('Skipping audio processing - recording is not active');
-            // return;
-        }
-
-        if (data.length === 1) {
-            // Handle button state change
-            const buttonState = data[0] === 1;
-            this.handleButtonState(buttonState);
-            return;
-        }
-
-        if (data.length === 2) {
-            // Handle ESP32 control messages (e.g., button state)
-            const view = new Int16Array(data.buffer);
-            if (view[0] === 2) {
-                console.log('Received PING from ESP32');
-                return;
-            }
-        }
-
-
-        const buffer = Buffer.from(data);
-        const b64 = convertAudioToPCM16(data);
+    handleIncomingAudio(data: Buffer) {
         this.audioManager.handleAudioBuffer(data);
-        // // Process audio data
-        // Ensure data buffer length is even before creating Int16Array
-        // const alignedBuffer = data.length % 2 === 0 ? data : Buffer.concat([data, Buffer.alloc(1)]);
-        // const processedBuffer = processAudioBuffer(alignedBuffer);
-        // Send to OpenAI
-        // this.sendEvent({
-        //     type: "input_audio_buffer.append",
-        //     audio: b64
-        // });
     }
 }
 

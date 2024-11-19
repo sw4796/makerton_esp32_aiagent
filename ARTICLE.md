@@ -1,6 +1,7 @@
-# Building a Real-time Voice Assistant with ESP32: Hardware and C++ Implementation
+## Building a Real-time Voice Assistant with ESP32: Hardware and C++ Implementation
 
-*In this two-part series, we're exploring how to build a real-time voice assistant using an ESP32 microcontroller and the power of AI. In [part one](link-to-part-one), we focused on setting up the hardware and configuring the ESP32 to handle audio input and output. Now, in part two, we'll dive deep into the C++ implementation, exploring buffer handling, speaker output, and integrating with PlatformIO to bring our voice assistant to life.*
+*In this two-part series, we're exploring how to build a real-time voice assistant using an ESP32 microcontroller and the power of AI. In this first installment, we'll focus on setting up the hardware and configuring the ESP32 to handle audio input and output. Then, in [part two](https://dev.to/fabrikapp/i-created-a-realtime-voice-assistant-for-my-esp-32-here-is-my-journey-part-2-node-openai-1og6), we'll dive deep into the C++ implementation, exploring buffer handling, speaker output, and integrating with PlatformIO to bring our voice assistant to life.*
+
 
 ## The Journey Starts
 
@@ -23,11 +24,14 @@ This voice assistant seamlessly merges the realms of embedded systems and modern
 - **I²S Protocol:** Ensuring high-quality, synchronized audio data transfer between devices.
 - **C++ Implementation:** Optimizing performance and resource utilization on the ESP32.
 
+## Video
+
+{% embed https://youtu.be/1H6FlWNRSYM %}
 
 ## Source Code
 
 The complete source code for this project is available on GitHub:
-[ESP32 AI Assistant Repository](https://github.com/FabrikappAgency/esp32-ai-assistant)
+[ESP32 AI Assistant Repository](https://github.com/FabrikappAgency/esp32-realtime-voice-assistant)
 
 ### Repository Structure
 
@@ -57,6 +61,7 @@ Each component plays a crucial role in the system:
 - The LangChain server provides the AI "brain" for understanding and responding
 
 
+![ESP32 AI Assistant](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/bfoowlhdm2e5dg5d9yfr.jpg)
 ## Required Materials
 
 To bring this project to life, you'll need the following hardware components:
@@ -76,6 +81,9 @@ With these materials in hand, you're ready to embark on the hardware setup and d
 ## Setting Up the Development Environment
 
 Before we delve into the code, let's set up our development environment using PlatformIO, a powerful open-source ecosystem for IoT development.
+
+
+![ESP32 AI Assistant](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/txjjs3l1qqtj5v6sgczz.png)
 
 ### Why PlatformIO?
 
@@ -118,9 +126,10 @@ Before we delve into the code, let's set up our development environment using Pl
        -DBOARD_HAS_PSRAM
    ```
 
+
 4. **Configure ESP32-WROOM Model:**
    
-   You may get in some issues while running your code. For ESP32-WROOM boards, add this specific configuration to your `platformio.ini`:
+   You may get in some issues while running your code. For ESP32-WROOM boards. If you are using a similar S3 Wroom Board, you may want to use the config file in the bottom of the article. You can also try specific configuration to your `platformio.ini`:
 
    ```ini
    [env:esp32dev]
@@ -520,7 +529,7 @@ With PlatformIO, building and flashing the code to the ESP32 is straightforward.
 
 4. **Upload the Firmware:**
    - Click on the right arrow (→) in the status bar or run `PlatformIO: Upload`.
-   - Monitor the output for successful upload messages.
+   - Monitor the output for successful upload messages. You can also run Build & Monitor.
 
 5. **Monitor Serial Output:**
    - Use `PlatformIO: Monitor` to view serial logs.
@@ -538,7 +547,7 @@ With PlatformIO, building and flashing the code to the ESP32 is straightforward.
 
 - **Runtime Errors:**
   - Use serial logs to debug.
-  - Ensure Wi-Fi credentials are correct in `config.h`.
+  - Ensure Wi-Fi credentials are correct in `config.cpp`.
 
 ## Testing the Voice Assistant
 
@@ -592,15 +601,13 @@ With the hardware and firmware in place, the next phase is to connect our device
 
 ## Ready for Part 2?
 
-Continue to [Part 2: From Hardware to Intelligence](ARTICLE_2.md), where we'll explore how to:
+Continue to [Part 2: From Hardware to Smartware : Node, OpenAI, Langchain](https://dev.to/fabrikapp/i-created-a-realtime-voice-assistant-for-my-esp-32-here-is-my-journey-part-2-node-openai-1og6), where we'll explore how to:
 
-- Build a robust Node.js server using TypeScript
-- Integrate LangChain for natural language processing
-- Connect OpenAI's powerful APIs
+- Build our Websocket server using TypeScript and connect our ESP32
+- Integrate LangChain ReAct agent
+- Connect OpenAI's Realtime APIs
 - Handle real-time audio streaming with WebSockets
-- Create an extensible tool system for your assistant
-
-We'll dive deep into the software architecture that brings intelligence to our ESP32 voice assistant!
+- Give to your assistant the total control of your computer (in our 3rd Episode)
 
 
 
@@ -608,11 +615,11 @@ We'll dive deep into the software architecture that brings intelligence to our E
 
 *If you found this article helpful or have questions, feel free to leave a comment below.*
 
-# Additional Resources
+## Additional Resources
 
 - **PlatformIO Documentation:** [https://docs.platformio.org/](https://docs.platformio.org/)
-- **ESP32 Audio Processing:** Explore libraries and examples for advanced audio features.
-- **LangChain and OpenAI Integration:** Prepare for integrating AI by familiarizing yourself with these tools.
+- **ESP32 Wroom Board Config:** [https://github.com/sivar2311/freenove-esp32-s3-platformio/blob/main/freenove_esp32_s3_wroom.json](https://github.com/sivar2311/freenove-esp32-s3-platformio/blob/main/freenove_esp32_s3_wroom.json)
+- **ThatProject:** A huge repo of ESP32 project [https://github.com/0015/ThatProject](https://github.com/0015/ThatProject)
 
 ## Community Projects
 
@@ -620,11 +627,7 @@ For those interested in similar projects, check out these related implementation
 
 ### Open Interpreter ESP32 Client
 
-The [Open Interpreter ESP32 Client](https://github.com/OpenInterpreter/01/tree/main/software/source/clients/esp32) provides another approach to building voice assistants with ESP32. Some key differences from our implementation include:
-
-- Uses different audio processing libraries
-- Has a different WebSocket protocol implementation
-- Takes a unique approach to buffer management
+The [Open Interpreter ESP32 Client](https://github.com/OpenInterpreter/01/tree/main/software/source/clients/esp32) provides another approach to building voice assistants with ESP32. It's a much more complete solution, and I'm actually on my way to see how I can integrate it.
 
 Exploring alternative implementations like this can provide valuable insights for improving your own projects.
 
