@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RemeDio 테스트 클라이언트</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .result {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-left: 4px solid #27ae60;
+            background-color: #d5f4e6;
+        }
+        .error {
+            border-left: 4px solid #e74c3c;
+            background-color: #fadbd8;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #27ae60;
+            color: white;
+        }
+        .status.disconnected {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .status.recording {
+            background-color: #f39c12;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ RemeDio 테스트 클라이언트</h1>
+        
+        <!-- 연결 상태 -->
+        <div class="test-section">
+            <h2>📡 연결 상태</h2>
+            <p>서버 상태: <span id="serverStatus" class="status disconnected">연결 안됨</span></p>
+            <p>WebSocket 상태: <span id="wsStatus" class="status disconnected">연결 안됨</span></p>
+            <button onclick="checkServerHealth()">서버 상태 확인</button>
+            <button onclick="connectWebSocket()">WebSocket 연결</button>
+            <button onclick="disconnectWebSocket()">WebSocket 연결 해제</button>
+        </div>
+
+        <!-- 세션 관리 -->
+        <div class="test-section">
+            <h2>📋 세션 관리</h2>
+            <input type="text" id="userId" placeholder="사용자 ID (예: user_001)" value="test_user_001">
+            <input type="text" id="facilityId" placeholder="시설 ID (예: facility_001)" value="test_facility_001">
+            <button onclick="createSession()">새 세션 생성</button>
+            <button onclick="getSessionStats()">세션 통계 조회</button>
+            <button onclick="getActiveSessions()">활성 세션 조회</button>
+            <div id="sessionResult" class="result"></div>
+        </div>
+
+        <!-- 센서 데이터 시뮬레이션 -->
+        <div class="test-section">
+            <h2>🌡️ 센서 데이터 시뮬레이션</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <div>
+                    <label>온도 (°C)</label>
+                    <input type="number" id="temperature" value="22" step="0.1">
+                </div>
+                <div>
+                    <label>습도 (%)</label>
+                    <input type="number" id="humidity" value="60" step="1">
+                </div>
+                <div>
+                    <label>조도 (lux)</label>
+                    <input type="number" id="lightLevel" value="500" step="10">
+                </div>
+            </div>
+            <button onclick="sendSensorData()">센서 데이터 전송</button>
+            <button onclick="generateRandomSensorData()">랜덤 센서 데이터</button>
+            <div id="sensorResult" class="result"></div>
+        </div>
+
+        <!-- 질문 생성 테스트 -->
+        <div class="test-section">
+            <h2>❓ 질문 생성 테스트</h2>
+            <textarea id="previousResponse" placeholder="이전 사용자 응답을 입력하세요 (예: 어릴 때 할머니와 함께 시장에 갔었어요.)" rows="3">어릴 때 할머니와 함께 시장에 갔었어요. 정말 즐거웠어요.</textarea>
+            <button onclick="generateQuestion()">후속 질문 생성</button>
+            <div id="questionResult" class="result"></div>
+        </div>
+
+        <!-- 음성 시뮬레이션 -->
+        <div class="test-section">
+            <h2>🎤 음성 시뮬레이션</h2>
+            <p>상태: <span id="recordingStatus" class="status disconnected">녹음 중지</span></p>
+            <textarea id="mockTranscript" placeholder="시뮬레이션할 사용자 응답을 입력하세요" rows="3">할머니가 사주신 과자를 먹으며 집에 돌아왔어요. 그때가 가장 행복했던 시간이었어요.</textarea>
+            <button onclick="startMockRecording()">녹음 시뮬레이션 시작</button>
+            <button onclick="stopMockRecording()">녹음 시뮬레이션 중지</button>
+            <div id="audioResult" class="result"></div>
+        </div>
+
+        <!-- 스토리 생성 -->
+        <div class="test-section">
+            <h2>📚 스토리 생성</h2>
+            <button onclick="analyzeTopics()">토픽 분석</button>
+            <button onclick="generateStory()">스토리 생성</button>
+            <button onclick="downloadStory()">스토리 다운로드</button>
+            <div id="storyResult" class="result"></div>
+        </div>
+
+        <!-- 관리자 대시보드 -->
+        <div class="test-section">
+            <h2>📊 관리자 대시보드</h2>
+            <button onclick="getDashboard()">대시보드 조회</button>
+            <button onclick="getFacilityStats()">시설별 통계</button>
+            <div id="dashboardResult" class="result"></div>
+        </div>
+
+        <!-- 전체 테스트 -->
+        <div class="test-section">
+            <h2>🚀 전체 테스트</h2>
+            <button onclick="runFullTest()">전체 플로우 테스트</button>
+            <button onclick="clearAllResults()">결과 지우기</button>
+            <div id="fullTestResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:8888';
+        let currentSessionId = null;
+        let ws = null;
+        let isRecording = false;
+
+        // 서버 상태 확인
+        async function checkServerHealth() {
+            try {
+                const response = await fetch(`${SERVER_URL}/api/sessions`);
+                const data = await response.json();
+                document.getElementById('serverStatus').textContent = '연결됨';
+                document.getElementById('serverStatus').className = 'status connected';
+                showResult('sessionResult', `✅ 서버 정상 작동\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                document.getElementById('serverStatus').textContent = '연결 안됨';
+                document.getElementById('serverStatus').className = 'status disconnected';
+                showResult('sessionResult', `❌ 서버 연결 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // WebSocket 연결
+        function connectWebSocket() {
+            try {
+                ws = new WebSocket(`ws://localhost:8888/device`);
+                
+                ws.onopen = function() {
+                    document.getElementById('wsStatus').textContent = '연결됨';
+                    document.getElementById('wsStatus').className = 'status connected';
+                    showResult('sessionResult', '✅ WebSocket 연결 성공', 'success');
+                };
+                
+                ws.onmessage = function(event) {
+                    showResult('audioResult', `📨 WebSocket 메시지 수신:\n${event.data}`, 'success');
+                };
+                
+                ws.onclose = function() {
+                    document.getElementById('wsStatus').textContent = '연결 안됨';
+                    document.getElementById('wsStatus').className = 'status disconnected';
+                };
+                
+                ws.onerror = function(error) {
+                    showResult('sessionResult', `❌ WebSocket 오류: ${error}`, 'error');
+                };
+            } catch (error) {
+                showResult('sessionResult', `❌ WebSocket 연결 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // WebSocket 연결 해제
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        // 세션 생성
+        async function createSession() {
+            const userId = document.getElementById('userId').value;
+            const facilityId = document.getElementById('facilityId').value;
+            
+            try {
+                const response = await fetch(`${SERVER_URL}/api/sessions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, facilityId })
+                });
+                const data = await response.json();
+                currentSessionId = data.sessionId;
+                showResult('sessionResult', `✅ 세션 생성 성공\n세션 ID: ${data.sessionId}`, 'success');
+            } catch (error) {
+                showResult('sessionResult', `❌ 세션 생성 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 세션 통계 조회
+        async function getSessionStats() {
+            try {
+                const response = await fetch(`${SERVER_URL}/api/sessions`);
+                const data = await response.json();
+                showResult('sessionResult', `📊 세션 통계\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult('sessionResult', `❌ 통계 조회 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 활성 세션 조회
+        async function getActiveSessions() {
+            try {
+                const response = await fetch(`${SERVER_URL}/api/admin/dashboard`);
+                const data = await response.json();
+                showResult('sessionResult', `📋 활성 세션\n${JSON.stringify(data.activeSessions, null, 2)}`, 'success');
+            } catch (error) {
+                showResult('sessionResult', `❌ 활성 세션 조회 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 센서 데이터 전송
+        async function sendSensorData() {
+            if (!currentSessionId) {
+                showResult('sensorResult', '❌ 먼저 세션을 생성해주세요', 'error');
+                return;
+            }
+
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            const humidity = parseFloat(document.getElementById('humidity').value);
+            const lightLevel = parseInt(document.getElementById('lightLevel').value);
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/sensor-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        temperature,
+                        humidity,
+                        lightLevel,
+                        sessionId: currentSessionId
+                    })
+                });
+                const data = await response.json();
+                showResult('sensorResult', `✅ 센서 데이터 처리 성공\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult('sensorResult', `❌ 센서 데이터 전송 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 랜덤 센서 데이터 생성
+        function generateRandomSensorData() {
+            document.getElementById('temperature').value = (Math.random() * 20 + 15).toFixed(1);
+            document.getElementById('humidity').value = Math.floor(Math.random() * 40 + 40);
+            document.getElementById('lightLevel').value = Math.floor(Math.random() * 800 + 200);
+        }
+
+        // 질문 생성
+        async function generateQuestion() {
+            if (!currentSessionId) {
+                showResult('questionResult', '❌ 먼저 세션을 생성해주세요', 'error');
+                return;
+            }
+
+            const previousResponse = document.getElementById('previousResponse').value;
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/generate-question`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: currentSessionId,
+                        previousResponse
+                    })
+                });
+                const data = await response.json();
+                showResult('questionResult', `✅ 질문 생성 성공\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult('questionResult', `❌ 질문 생성 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 녹음 시뮬레이션 시작
+        function startMockRecording() {
+            isRecording = true;
+            document.getElementById('recordingStatus').textContent = '녹음 중';
+            document.getElementById('recordingStatus').className = 'status recording';
+            showResult('audioResult', '🎤 녹음 시뮬레이션 시작...', 'success');
+        }
+
+        // 녹음 시뮬레이션 중지
+        async function stopMockRecording() {
+            if (!isRecording) return;
+            
+            isRecording = false;
+            document.getElementById('recordingStatus').textContent = '녹음 중지';
+            document.getElementById('recordingStatus').className = 'status disconnected';
+
+            const transcript = document.getElementById('mockTranscript').value;
+            
+            if (!currentSessionId) {
+                showResult('audioResult', '❌ 먼저 세션을 생성해주세요', 'error');
+                return;
+            }
+
+            try {
+                // 응답을 세션에 추가
+                const response = await fetch(`${SERVER_URL}/api/sessions/${currentSessionId}/responses`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        response: transcript,
+                        duration: 5 // 시뮬레이션된 녹음 시간 (초)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('audioResult', `✅ 음성 시뮬레이션 완료\n전사 결과: ${transcript}\n응답이 세션에 저장되었습니다.`, 'success');
+                } else {
+                    showResult('audioResult', `❌ 응답 저장 실패: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('audioResult', `❌ 음성 처리 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 토픽 분석
+        async function analyzeTopics() {
+            if (!currentSessionId) {
+                showResult('storyResult', '❌ 먼저 세션을 생성해주세요', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/analyze-topics`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: currentSessionId })
+                });
+                const data = await response.json();
+                showResult('storyResult', `✅ 토픽 분석 완료\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult('storyResult', `❌ 토픽 분석 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 스토리 생성
+        async function generateStory() {
+            if (!currentSessionId) {
+                showResult('storyResult', '❌ 먼저 세션을 생성해주세요', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/generate-story`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: currentSessionId })
+                });
+                const data = await response.json();
+                showResult('storyResult', `✅ 스토리 생성 완료\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult('storyResult', `❌ 스토리 생성 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 스토리 다운로드
+        async function downloadStory() {
+            if (!currentSessionId) {
+                showResult('storyResult', '❌ 먼저 세션을 생성해주세요', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/download-story/${currentSessionId}`);
+                const data = await response.json();
+                showResult('storyResult', `✅ 스토리 다운로드 준비 완료\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult('storyResult', `❌ 스토리 다운로드 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 관리자 대시보드 조회
+        async function getDashboard() {
+            try {
+                const response = await fetch(`${SERVER_URL}/api/admin/dashboard`);
+                const data = await response.json();
+                showResult('dashboardResult', `📊 관리자 대시보드\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult('dashboardResult', `❌ 대시보드 조회 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 시설별 통계 조회
+        async function getFacilityStats() {
+            const facilityId = document.getElementById('facilityId').value;
+            try {
+                const response = await fetch(`${SERVER_URL}/api/admin/facility-stats/${facilityId}`);
+                const data = await response.json();
+                showResult('dashboardResult', `📈 시설별 통계\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult('dashboardResult', `❌ 시설별 통계 조회 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 전체 테스트 실행
+        async function runFullTest() {
+            showResult('fullTestResult', '🚀 전체 테스트 시작...\n', 'success');
+            
+            try {
+                // 1. 서버 상태 확인
+                await checkServerHealth();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 2. 세션 생성
+                await createSession();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 3. 센서 데이터 전송
+                generateRandomSensorData();
+                await sendSensorData();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 4. 질문 생성
+                await generateQuestion();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 5. 음성 시뮬레이션
+                startMockRecording();
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                await stopMockRecording();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 6. 토픽 분석
+                await analyzeTopics();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 7. 스토리 생성
+                await generateStory();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 8. 대시보드 조회
+                await getDashboard();
+                
+                showResult('fullTestResult', '🎉 전체 테스트 완료! 모든 기능이 정상적으로 작동합니다.', 'success');
+                
+            } catch (error) {
+                showResult('fullTestResult', `❌ 테스트 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 결과 표시 함수
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${type}`;
+        }
+
+        // 모든 결과 지우기
+        function clearAllResults() {
+            const resultElements = document.querySelectorAll('.result');
+            resultElements.forEach(element => {
+                element.textContent = '';
+                element.className = 'result';
+            });
+        }
+
+        // 페이지 로드 시 서버 상태 확인
+        window.onload = function() {
+            checkServerHealth();
+        };
+    </script>
+</body>
+</html>

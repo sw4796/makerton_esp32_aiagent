@@ -8,20 +8,21 @@ extern const char* WIFI_SSID;
 extern const char* WIFI_PASSWORD;
 extern const char* WEBSOCKET_HOST;
 // I2S Microphone pins
-#define I2S_SD 45  // Serial Data
-#define I2S_WS 41  // Word Select (LRCLK)
-#define I2S_SCK 47 // Serial Clock
+
+#define I2S_SD 32      // Serial Data
+#define I2S_WS 25      // Word Select (LRCLK)
+#define I2S_SCK 33     // Serial Clock
 
 // Speaker pins
-#define I2S_SPEAKER_BCLK 20 // Bit Clock
-#define I2S_SPEAKER_LRC 21  // Left Right Clock (Word Select)
-#define I2S_SPEAKER_DIN 19  // Data Input
+#define I2S_SPEAKER_BCLK 26 // Bit Clock
+#define I2S_SPEAKER_LRC 27  // Left Right Clock (Word Select)
+#define I2S_SPEAKER_DIN 14  // Data Input
 
 // LED pins
-#define LED_MIC 3   // RED LED for microphone activity
-#define LED_SPKR 42 // BLUE LED for speaker activity
+#define LED_MIC 2      // RED LED for microphone activity (내장 LED)
+#define LED_SPKR 4     // BLUE LED for speaker activity
 // Button pin
-#define BUTTON_PIN 46
+#define BUTTON_PIN 15  // Button pin
 
 // I2S Microphone configuration
 // #define SAMPLE_RATE 44100
@@ -33,8 +34,8 @@ extern const char* WEBSOCKET_HOST;
 #define I2S_PORT_SPEAKER I2S_NUM_1
 
 // Buffer configuration
-#define bufferCnt 10
-#define bufferLen 1024
+#define bufferCnt 4
+#define bufferLen 256
 
 // Audio detection thresholds
 #define MIC_THRESHOLD 2300 // Adjust based on testing

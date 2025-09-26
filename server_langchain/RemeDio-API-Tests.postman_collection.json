@@ -1,0 +1,164 @@
+{
+  "info": {
+    "name": "RemeDio API Tests",
+    "description": "RemeDio 서버 API 테스트 컬렉션",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "서버 상태 확인",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/sessions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "sessions"]
+        }
+      }
+    },
+    {
+      "name": "세션 생성",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"test_user_001\",\n  \"facilityId\": \"test_facility_001\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/sessions",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "sessions"]
+        }
+      }
+    },
+    {
+      "name": "센서 데이터 전송",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature\": 22.5,\n  \"humidity\": 65.0,\n  \"lightLevel\": 500,\n  \"sessionId\": \"{{sessionId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/sensor-data",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "sensor-data"]
+        }
+      }
+    },
+    {
+      "name": "질문 생성",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"previousResponse\": \"어릴 때 할머니와 함께 시장에 갔었어요.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/generate-question",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "generate-question"]
+        }
+      }
+    },
+    {
+      "name": "토픽 분석",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze-topics",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "analyze-topics"]
+        }
+      }
+    },
+    {
+      "name": "스토리 생성",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/generate-story",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "generate-story"]
+        }
+      }
+    },
+    {
+      "name": "관리자 대시보드",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/dashboard",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "dashboard"]
+        }
+      }
+    },
+    {
+      "name": "시설별 통계",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/facility-stats/{{facilityId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "facility-stats", "{{facilityId}}"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8888"
+    },
+    {
+      "key": "sessionId",
+      "value": ""
+    },
+    {
+      "key": "facilityId",
+      "value": "test_facility_001"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "sessionId": "remedio_1758863541803_wjhouzo5s",
+  "userId": "test_user_001",
+  "facilityId": "test_facility_001",
+  "startTime": "2025-09-26T05:12:21.803Z",
+  "responses": [
+    {
+      "timestamp": "2025-09-26T05:12:38.989Z",
+      "transcript": "어릴 때 할머니와 함께 시장에 갔었어요. 정말 즐거웠어요.",
+      "duration": 5
+    },
+    {
+      "timestamp": "2025-09-26T05:12:45.683Z",
+      "transcript": "할머니가 사주신 과자를 먹으며 집에 돌아왔어요. 그때가 가장 행복했던 시간이었어요.\n",
+      "duration": 5
+    },
+    {
+      "timestamp": "2025-09-26T05:13:06.987Z",
+      "transcript": "언젠가 다시 한번 할머니와 과자를 먹으러 시장에 가고싶네요",
+      "duration": 5
+    }
+  ],
+  "isComplete": false,
+  "sensorData": {
+    "temperature": 22,
+    "humidity": 60,
+    "lightLevel": 500,
+    "timestamp": "2025-09-26T05:12:24.435Z"
+  }
+}

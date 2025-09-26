@@ -1,7 +1,13 @@
 {
-  "name": "js_server",
+  "name": "remedio-server",
+  "version": "1.0.0",
+  "description": "RemeDio - 기억을 깨우는 라디오 서버",
   "scripts": {
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "node test-remedio.js",
+    "build": "tsc",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.1",
@@ -12,6 +18,7 @@
     "clipboardy": "^4.0.0",
     "dotenv": "^16.4.5",
     "hono": "^4.6.3",
+    "openai": "^5.23.0",
     "wav": "^1.0.2",
     "ws": "^8.18.0",
     "zod": "^3.23.8",

@@ -1,30 +1,205 @@
-import { z } from "zod";
-
 import { tool } from "@langchain/core/tools";
-import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
+import { environmentalContextManager, EnvironmentalContext } from "./lib/environmental";
+import { storyGenerationEngine, StoryNarrative } from "./lib/story";
 
-const add = tool(
-  async ({ a, b }) => {
-    return a + b;
+// 환경 센서 데이터 처리 도구 (업데이트됨)
+const processSensorData = tool(
+  async (input: any) => {
+    const { temperature, humidity, lightLevel, timeOfDay, weather } = input;
+    // 환경 컨텍스트 매니저를 사용하여 종합적인 분석 수행
+    const context = environmentalContextManager.generateContext({
+      temperature,
+      humidity,
+      lightLevel
+    });
+    
+    // 오프닝 멘트와 후속 질문 생성
+    const openingMent = environmentalContextManager.generateOpeningMent(context);
+    const followUpQuestion = environmentalContextManager.generateFollowUpQuestion(context);
+    
+    return {
+      context,
+      mood: context.mood,
+      openingMent,
+      followUpQuestion,
+      environmentalSummary: `${context.weatherData.description} ${context.timeContext.timeOfDay}의 ${context.mood.description} 분위기`
+    };
   },
   {
-    name: "add",
-    description:
-      "Add two numbers. Please let the user know that you're adding the numbers BEFORE you call the tool",
-    schema: z.object({
-      a: z.number(),
-      b: z.number(),
-    }),
+    name: "processSensorData",
+    description: "환경 센서 데이터를 종합적으로 분석하여 대화 컨텍스트와 오프닝 멘트를 생성합니다.",
+    schema: {
+      type: "object",
+      properties: {
+        temperature: { type: "number", description: "온도 (섭씨)" },
+        humidity: { type: "number", description: "습도 (%)" },
+        lightLevel: { type: "number", description: "조도 (lux)" },
+        timeOfDay: { type: "string", description: "시간대 (오전/오후/저녁)" },
+        weather: { type: "string", description: "날씨 상태" }
+      },
+      required: ["temperature", "humidity", "lightLevel", "timeOfDay", "weather"]
+    },
   }
 );
 
-const tavilyTool = new TavilySearchResults({
-  maxResults: 5,
-  kwargs: {
-    includeAnswer: true,
+// 환경 기반 후속 질문 생성 도구
+const generateContextualQuestion = tool(
+  async (input: any) => {
+    const { sessionId, previousResponse } = input;
+    // 세션에서 환경 컨텍스트 가져오기 (실제 구현에서는 세션 매니저에서 가져옴)
+    const mockContext = {
+      sensorData: { temperature: 22, humidity: 60, lightLevel: 500, timestamp: new Date().toISOString() },
+      weatherData: { temperature: 22, humidity: 60, description: "따뜻한", location: "현재 공간" },
+      timeContext: { timeOfDay: "오후" as const, hour: 14, greeting: "좋은 오후", season: "가을" },
+      mood: { primary: "따뜻한", secondary: "편안한", description: "따뜻하고 편안한" }
+    };
+    
+    const question = environmentalContextManager.generateFollowUpQuestion(mockContext, previousResponse);
+    
+    return {
+      question,
+      context: mockContext,
+      timestamp: new Date().toISOString()
+    };
   },
-});
+  {
+    name: "generateContextualQuestion",
+    description: "이전 응답과 환경 컨텍스트를 기반으로 자연스러운 후속 질문을 생성합니다.",
+    schema: {
+      type: "object",
+      properties: {
+        sessionId: { type: "string", description: "세션 ID" },
+        previousResponse: { type: "string", description: "이전 사용자 응답" }
+      },
+      required: ["sessionId"]
+    },
+  }
+);
 
-tavilyTool.description = `This is a search tool for accessing the internet.\n\nLet the user know you're asking your friend Tavily for help before you call the tool.`;
+// 사용자 응답 저장 도구
+const saveUserResponse = tool(
+  async (input: any) => {
+    const { sessionId, response, timestamp } = input;
+    // 실제 구현에서는 데이터베이스에 저장
+    console.log(`세션 ${sessionId}에 응답 저장:`, response);
+    return {
+      success: true,
+      message: "응답이 성공적으로 저장되었습니다.",
+      sessionId,
+      timestamp
+    };
+  },
+  {
+    name: "saveUserResponse",
+    description: "사용자의 응답을 세션에 저장합니다.",
+    schema: {
+      type: "object",
+      properties: {
+        sessionId: { type: "string", description: "세션 ID" },
+        response: { type: "string", description: "사용자 응답 텍스트" },
+        timestamp: { type: "string", description: "응답 시간" }
+      },
+      required: ["sessionId", "response", "timestamp"]
+    },
+  }
+);
 
-export const TOOLS = [add, tavilyTool];
+// 세션 상태 확인 도구
+const checkSessionStatus = tool(
+  async (input: any) => {
+    const { sessionId } = input;
+    // 실제 구현에서는 데이터베이스에서 세션 상태 확인
+    const mockSessionData = {
+      sessionId,
+      startTime: new Date().toISOString(),
+      responses: [],
+      isComplete: false,
+      estimatedDuration: 15 // 분
+    };
+    
+    return mockSessionData;
+  },
+  {
+    name: "checkSessionStatus",
+    description: "현재 세션의 상태를 확인합니다.",
+    schema: {
+      type: "object",
+      properties: {
+        sessionId: { type: "string", description: "세션 ID" }
+      },
+      required: ["sessionId"]
+    },
+  }
+);
+
+// 스토리 생성 도구
+const generateStory = tool(
+  async (input: any) => {
+    const { sessionId } = input;
+    // 실제 구현에서는 세션 매니저에서 응답 데이터 가져오기
+    const mockResponses = [
+      { transcript: "어릴 때 할머니와 함께 시장에 갔었어요. 정말 즐거웠어요.", timestamp: new Date().toISOString() },
+      { transcript: "할머니가 사주신 과자를 먹으며 집에 돌아왔어요.", timestamp: new Date().toISOString() }
+    ];
+    
+    const narrative = await storyGenerationEngine.generateNarrative(sessionId, mockResponses);
+    
+    return {
+      success: true,
+      narrative,
+      message: "스토리가 성공적으로 생성되었습니다.",
+      timestamp: new Date().toISOString()
+    };
+  },
+  {
+    name: "generateStory",
+    description: "사용자의 응답들을 기반으로 개인화된 스토리 내러티브를 생성합니다.",
+    schema: {
+      type: "object",
+      properties: {
+        sessionId: { type: "string", description: "세션 ID" }
+      },
+      required: ["sessionId"]
+    },
+  }
+);
+
+// 토픽 분석 도구
+const analyzeTopics = tool(
+  async (input: any) => {
+    const { sessionId } = input;
+    // 실제 구현에서는 세션 매니저에서 응답 데이터 가져오기
+    const mockResponses = [
+      { transcript: "어릴 때 할머니와 함께 시장에 갔었어요.", timestamp: new Date().toISOString() },
+      { transcript: "학교에서 친구들과 놀았어요.", timestamp: new Date().toISOString() }
+    ];
+    
+    const topics = storyGenerationEngine.extractTopics(mockResponses);
+    const characters = storyGenerationEngine.extractCharacters(mockResponses);
+    
+    return {
+      success: true,
+      topics,
+      characters,
+      analysis: {
+        totalTopics: topics.length,
+        totalCharacters: characters.length,
+        mainTheme: topics[0]?.name || "일상의 추억"
+      },
+      timestamp: new Date().toISOString()
+    };
+  },
+  {
+    name: "analyzeTopics",
+    description: "사용자의 응답을 분석하여 주요 토픽과 등장인물을 추출합니다.",
+    schema: {
+      type: "object",
+      properties: {
+        sessionId: { type: "string", description: "세션 ID" }
+      },
+      required: ["sessionId"]
+    },
+  }
+);
+
+export const TOOLS = [processSensorData, generateContextualQuestion, saveUserResponse, checkSessionStatus, generateStory, analyzeTopics];
