@@ -5,7 +5,7 @@
 
 class AudioMemoryBuffer {
 private:
-    static const int BUFFER_SIZE = 32768; // 32Ko buffer size
+    static const int BUFFER_SIZE = 16384; // 32Ko buffer size
     int16_t* buffer;
     int writeIndex = 0;
     int readIndex = 0; 

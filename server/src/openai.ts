@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import WebSocket from 'ws';
 
 export function createOpenAIWebSocket() {
-    return new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01", {
+    return new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-10-01", {
         headers: {
             "Authorization": "Bearer " + process.env.OPENAI_API_KEY,
             "OpenAI-Beta": "realtime=v1",

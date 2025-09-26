@@ -1,4 +1,5 @@
 import { tool } from "@langchain/core/tools";
+import { z } from "zod";
 import { environmentalContextManager, EnvironmentalContext } from "./lib/environmental";
 import { storyGenerationEngine, StoryNarrative } from "./lib/story";
 
@@ -28,17 +29,13 @@ const processSensorData = tool(
   {
     name: "processSensorData",
     description: "환경 센서 데이터를 종합적으로 분석하여 대화 컨텍스트와 오프닝 멘트를 생성합니다.",
-    schema: {
-      type: "object",
-      properties: {
-        temperature: { type: "number", description: "온도 (섭씨)" },
-        humidity: { type: "number", description: "습도 (%)" },
-        lightLevel: { type: "number", description: "조도 (lux)" },
-        timeOfDay: { type: "string", description: "시간대 (오전/오후/저녁)" },
-        weather: { type: "string", description: "날씨 상태" }
-      },
-      required: ["temperature", "humidity", "lightLevel", "timeOfDay", "weather"]
-    },
+    schema: z.object({
+      temperature: z.number().describe("온도 (섭씨)"),
+      humidity: z.number().describe("습도 (%)"),
+      lightLevel: z.number().describe("조도 (lux)"),
+      timeOfDay: z.string().describe("시간대 (오전/오후/저녁)"),
+      weather: z.string().describe("날씨 상태")
+    }),
   }
 );
 
@@ -65,14 +62,10 @@ const generateContextualQuestion = tool(
   {
     name: "generateContextualQuestion",
     description: "이전 응답과 환경 컨텍스트를 기반으로 자연스러운 후속 질문을 생성합니다.",
-    schema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string", description: "세션 ID" },
-        previousResponse: { type: "string", description: "이전 사용자 응답" }
-      },
-      required: ["sessionId"]
-    },
+    schema: z.object({
+      sessionId: z.string().describe("세션 ID"),
+      previousResponse: z.string().optional().describe("이전 사용자 응답")
+    }),
   }
 );
 
@@ -92,15 +85,11 @@ const saveUserResponse = tool(
   {
     name: "saveUserResponse",
     description: "사용자의 응답을 세션에 저장합니다.",
-    schema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string", description: "세션 ID" },
-        response: { type: "string", description: "사용자 응답 텍스트" },
-        timestamp: { type: "string", description: "응답 시간" }
-      },
-      required: ["sessionId", "response", "timestamp"]
-    },
+    schema: z.object({
+      sessionId: z.string().describe("세션 ID"),
+      response: z.string().describe("사용자 응답 텍스트"),
+      timestamp: z.string().describe("응답 시간")
+    }),
   }
 );
 
@@ -122,13 +111,9 @@ const checkSessionStatus = tool(
   {
     name: "checkSessionStatus",
     description: "현재 세션의 상태를 확인합니다.",
-    schema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string", description: "세션 ID" }
-      },
-      required: ["sessionId"]
-    },
+    schema: z.object({
+      sessionId: z.string().describe("세션 ID")
+    }),
   }
 );
 
@@ -154,13 +139,9 @@ const generateStory = tool(
   {
     name: "generateStory",
     description: "사용자의 응답들을 기반으로 개인화된 스토리 내러티브를 생성합니다.",
-    schema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string", description: "세션 ID" }
-      },
-      required: ["sessionId"]
-    },
+    schema: z.object({
+      sessionId: z.string().describe("세션 ID")
+    }),
   }
 );
 
@@ -192,13 +173,9 @@ const analyzeTopics = tool(
   {
     name: "analyzeTopics",
     description: "사용자의 응답을 분석하여 주요 토픽과 등장인물을 추출합니다.",
-    schema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string", description: "세션 ID" }
-      },
-      required: ["sessionId"]
-    },
+    schema: z.object({
+      sessionId: z.string().describe("세션 ID")
+    }),
   }
 );
 
